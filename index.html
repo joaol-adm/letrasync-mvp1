@@ -10,7 +10,7 @@
     body {
       font-family: sans-serif;
       margin: 0;
-      padding-bottom: 180px;
+      padding-bottom: 200px;
       background: var(--bg-color);
       color: var(--text-color);
       transition: background 0.3s, color 0.3s;
@@ -94,6 +94,20 @@
       border-radius: 5px;
       color: yellow;
     }
+    #volumeMeterContainer {
+      width: 100px;
+      height: 10px;
+      background: rgba(255,255,255,0.2);
+      border-radius: 5px;
+      overflow: hidden;
+      margin: 5px auto;
+    }
+    #volumeMeter {
+      height: 100%;
+      width: 0%;
+      background: lime;
+      transition: width 0.1s linear;
+    }
   </style>
 </head>
 <body>
@@ -110,6 +124,7 @@
       <button id="syncBtn">🎤 Sync Off</button>
       <div id="micPermissionMsg">ℹ️ Toque em "Sync" e permita acesso ao microfone para sincronizar a letra.</div>
       <div id="micStatusMsg">⚠️ Microfone inativo</div>
+      <div id="volumeMeterContainer"><div id="volumeMeter"></div></div>
     </div>
     <label>Sensibilidade: <input type="range" id="thresholdSlider" min="5" max="100" value="20"> <span id="thresholdValue">20</span></label>
     <input type="range" id="speedSlider" min="1" max="10" value="3">

@@ -22,6 +22,7 @@ const speedSlider = document.getElementById("speedSlider");
 const speedValue = document.getElementById("speedValue");
 const themeToggle = document.getElementById("themeToggle");
 const beatIndicator = document.getElementById("beatIndicator");
+const volumeMeter = document.getElementById("volumeMeter");
 
 let html5QrCode;
 let silenceTimer;
@@ -148,10 +149,11 @@ function activateSync() {
         microphone = audioContext.createMediaStreamSource(stream);
         microphone.connect(analyser);
         dataArray = new Uint8Array(analyser.frequencyBinCount);
-        detectBeats();
         syncMode = true;
         syncBtn.textContent = "🎤 Sync On";
         micPermissionMsg.style.display = "none";
+        micStatusMsg.textContent = "⏳ Aguardando som...";
+        detectBeats();
       });
     }).catch(err => {
       micPermissionMsg.textContent = "❌ Permissão ao microfone negada.";
@@ -162,6 +164,7 @@ function activateSync() {
     syncBtn.textContent = "🎤 Sync Off";
     micPermissionMsg.style.display = "block";
     micStatusMsg.textContent = "⚠️ Microfone inativo";
+    volumeMeter.style.width = "0%";
   }
 }
 
@@ -174,13 +177,16 @@ function detectBeats() {
   }
   let volume = sum / dataArray.length;
 
+  let volumePercent = Math.min(100, Math.max(0, volume * 5));
+  volumeMeter.style.width = volumePercent + "%";
+
   if (volume > threshold) {
     beatIndicator.classList.add("active");
     setTimeout(() => beatIndicator.classList.remove("active"), 100);
     micStatusMsg.textContent = "🎤 Captando áudio...";
     clearTimeout(silenceTimer);
     silenceTimer = setTimeout(() => {
-      micStatusMsg.textContent = "🔇 Sem som detectado";
+      micStatusMsg.textContent = "⏳ Aguardando som...";
     }, 1500);
     nextLine();
     setTimeout(detectBeats, 1000);
