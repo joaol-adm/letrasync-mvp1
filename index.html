@@ -9,8 +9,9 @@
   <style>
     body { font-family: sans-serif; text-align: center; background: #111; color: #fff; padding: 1rem; }
     #lyrics { margin-top: 1rem; font-size: 1.5rem; }
-    .line { opacity: 0.4; }
-    .current { opacity: 1; color: #ff0; font-weight: bold; }
+    .line { opacity: 0.4; cursor: pointer; transition: background 0.3s; padding: 0.2rem; border-radius: 5px; }
+    .line:hover { background: rgba(255,255,255,0.1); }
+    .current { opacity: 1; color: #ff0; font-weight: bold; background: rgba(255,255,0,0.2); }
     #controls { margin-top: 1rem; }
     button { padding: 0.5rem 1rem; margin: 0.5rem; font-size: 1rem; }
     input[type=range] { width: 200px; }
@@ -22,7 +23,8 @@
   <div id="reader"></div>
   <div id="controls">
     <button id="playPauseBtn">▶️ Play</button>
-    <button id="nextBtn">⏭ Avançar</button><br>
+    <button id="nextBtn">⏭ Avançar</button>
+    <button id="restartBtn" style="display:none;">🔄 Reiniciar</button><br>
     Velocidade: <input type="range" id="speedSlider" min="1" max="10" value="3"> <span id="speedValue">3s</span>
   </div>
   <div id="lyrics"></div>
