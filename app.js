@@ -7,11 +7,15 @@ const lyricsEl = document.getElementById("lyrics");
 const playPauseBtn = document.getElementById("playPauseBtn");
 const nextBtn = document.getElementById("nextBtn");
 const restartBtn = document.getElementById("restartBtn");
+const scanAgainBtn = document.getElementById("scanAgainBtn");
 const speedSlider = document.getElementById("speedSlider");
 const speedValue = document.getElementById("speedValue");
+const themeToggle = document.getElementById("themeToggle");
+
+let html5QrCode;
 
 function startQRScanner() {
-  const html5QrCode = new Html5Qrcode("reader");
+  html5QrCode = new Html5Qrcode("reader");
   const config = { fps: 10, qrbox: 250 };
   html5QrCode.start(
     { facingMode: "environment" },
@@ -29,14 +33,11 @@ function startQRScanner() {
 function normalizeUrl(url) {
   // GitHub
   if (url.includes("github.com") && url.includes("/blob/")) {
-    return url
-      .replace("github.com", "raw.githubusercontent.com")
-      .replace("/blob/", "/");
+    return url.replace("github.com", "raw.githubusercontent.com").replace("/blob/", "/");
   }
   // GitLab
   if (url.includes("gitlab.com") && url.includes("/-/blob/")) {
-    return url
-      .replace("/-/blob/", "/-/raw/");
+    return url.replace("/-/blob/", "/-/raw/");
   }
   // Bitbucket
   if (url.includes("bitbucket.org") && url.includes("/src/")) {
@@ -53,6 +54,10 @@ function normalizeUrl(url) {
       return `https://drive.google.com/uc?export=download&id=${fileIdMatch[0]}`;
     }
   }
+  // OneDrive
+  if (url.includes("1drv.ms")) {
+    return url.replace("1drv.ms", "onedrive.live.com/download");
+  }
   return url;
 }
 
@@ -60,17 +65,18 @@ async function loadLyrics(url) {
   try {
     const normalizedUrl = normalizeUrl(url);
     console.log("🔄 URL normalizada:", normalizedUrl);
-
     const res = await fetch(normalizedUrl);
     if (!res.ok) throw new Error("Erro ao carregar");
     const text = await res.text();
     lyrics = text.split("\n").filter(line => line.trim() !== "");
     currentLine = 0;
     restartBtn.style.display = "none";
+    scanAgainBtn.style.display = "none";
     renderLyrics();
   } catch (err) {
     lyricsEl.textContent = "❌ Não foi possível carregar a letra.";
     console.error(err);
+    scanAgainBtn.style.display = "inline-block";
   }
 }
 
@@ -98,10 +104,10 @@ function playPause() {
   if (timer) {
     clearInterval(timer);
     timer = null;
-    playPauseBtn.textContent = "▶️ Play";
+    playPauseBtn.textContent = "▶️";
   } else {
     timer = setInterval(nextLine, interval);
-    playPauseBtn.textContent = "⏸ Pause";
+    playPauseBtn.textContent = "⏸";
   }
 }
 
@@ -112,8 +118,9 @@ function nextLine() {
   } else {
     clearInterval(timer);
     timer = null;
-    playPauseBtn.textContent = "▶️ Play";
+    playPauseBtn.textContent = "▶️";
     restartBtn.style.display = "inline-block";
+    scanAgainBtn.style.display = "inline-block";
   }
 }
 
@@ -121,6 +128,13 @@ function restartLyrics() {
   currentLine = 0;
   restartBtn.style.display = "none";
   renderLyrics();
+}
+
+function scanAgain() {
+  lyricsEl.innerHTML = "";
+  restartBtn.style.display = "none";
+  scanAgainBtn.style.display = "none";
+  startQRScanner();
 }
 
 speedSlider.addEventListener("input", () => {
@@ -135,6 +149,20 @@ speedSlider.addEventListener("input", () => {
 playPauseBtn.addEventListener("click", playPause);
 nextBtn.addEventListener("click", nextLine);
 restartBtn.addEventListener("click", restartLyrics);
+scanAgainBtn.addEventListener("click", scanAgain);
+
+// Troca de tema manual
+themeToggle.addEventListener("click", () => {
+  if (document.body.dataset.theme === "light") {
+    document.body.dataset.theme = "dark";
+    document.documentElement.style.setProperty("--bg-color", "#111");
+    document.documentElement.style.setProperty("--text-color", "#fff");
+  } else {
+    document.body.dataset.theme = "light";
+    document.documentElement.style.setProperty("--bg-color", "#f5f5f5");
+    document.documentElement.style.setProperty("--text-color", "#000");
+  }
+});
 
 // Atalhos de teclado
 window.addEventListener("keydown", (e) => {
