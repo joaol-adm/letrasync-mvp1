@@ -14,6 +14,8 @@ const restartBtn = document.getElementById("restartBtn");
 const scanAgainBtn = document.getElementById("scanAgainBtn");
 const adjustBtn = document.getElementById("adjustBtn");
 const syncBtn = document.getElementById("syncBtn");
+const micPermissionMsg = document.getElementById("micPermissionMsg");
+const micStatusMsg = document.getElementById("micStatusMsg");
 const thresholdSlider = document.getElementById("thresholdSlider");
 const thresholdValue = document.getElementById("thresholdValue");
 const speedSlider = document.getElementById("speedSlider");
@@ -22,6 +24,7 @@ const themeToggle = document.getElementById("themeToggle");
 const beatIndicator = document.getElementById("beatIndicator");
 
 let html5QrCode;
+let silenceTimer;
 
 function startQRScanner() {
   html5QrCode = new Html5Qrcode("reader");
@@ -67,7 +70,6 @@ function normalizeUrl(url) {
 async function loadLyrics(url) {
   try {
     const normalizedUrl = normalizeUrl(url);
-    console.log("🔄 URL normalizada:", normalizedUrl);
     const res = await fetch(normalizedUrl);
     if (!res.ok) throw new Error("Erro ao carregar");
     const text = await res.text();
@@ -78,7 +80,6 @@ async function loadLyrics(url) {
     renderLyrics();
   } catch (err) {
     lyricsEl.textContent = "❌ Não foi possível carregar a letra.";
-    console.error(err);
     scanAgainBtn.style.display = "inline-block";
   }
 }
@@ -91,9 +92,7 @@ function renderLyrics() {
     div.classList.add("line");
     if (index === currentLine) {
       div.classList.add("current");
-      setTimeout(() => {
-        div.scrollIntoView({ behavior: "smooth", block: "center" });
-      }, 100);
+      setTimeout(() => div.scrollIntoView({ behavior: "smooth", block: "center" }), 100);
     }
     div.addEventListener("click", () => {
       currentLine = index;
@@ -143,18 +142,26 @@ function scanAgain() {
 function activateSync() {
   if (!syncMode) {
     navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
-      audioContext = new AudioContext();
-      analyser = audioContext.createAnalyser();
-      microphone = audioContext.createMediaStreamSource(stream);
-      microphone.connect(analyser);
-      dataArray = new Uint8Array(analyser.frequencyBinCount);
-      detectBeats();
-      syncMode = true;
-      syncBtn.textContent = "🎤 Sync On";
-    }).catch(err => console.error(err));
+      audioContext = new (window.AudioContext || window.webkitAudioContext)();
+      audioContext.resume().then(() => {
+        analyser = audioContext.createAnalyser();
+        microphone = audioContext.createMediaStreamSource(stream);
+        microphone.connect(analyser);
+        dataArray = new Uint8Array(analyser.frequencyBinCount);
+        detectBeats();
+        syncMode = true;
+        syncBtn.textContent = "🎤 Sync On";
+        micPermissionMsg.style.display = "none";
+      });
+    }).catch(err => {
+      micPermissionMsg.textContent = "❌ Permissão ao microfone negada.";
+      micPermissionMsg.style.color = "red";
+    });
   } else {
     syncMode = false;
     syncBtn.textContent = "🎤 Sync Off";
+    micPermissionMsg.style.display = "block";
+    micStatusMsg.textContent = "⚠️ Microfone inativo";
   }
 }
 
@@ -166,9 +173,15 @@ function detectBeats() {
     sum += Math.abs(dataArray[i] - 128);
   }
   let volume = sum / dataArray.length;
+
   if (volume > threshold) {
     beatIndicator.classList.add("active");
     setTimeout(() => beatIndicator.classList.remove("active"), 100);
+    micStatusMsg.textContent = "🎤 Captando áudio...";
+    clearTimeout(silenceTimer);
+    silenceTimer = setTimeout(() => {
+      micStatusMsg.textContent = "🔇 Sem som detectado";
+    }, 1500);
     nextLine();
     setTimeout(detectBeats, 1000);
   } else {
