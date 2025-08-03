@@ -3,14 +3,23 @@ let lyrics = [];
 let currentLine = 0;
 let timer = null;
 let interval = 3000;
+let syncMode = false;
+let threshold = 20;
+let audioContext, analyser, microphone, dataArray;
+
 const lyricsEl = document.getElementById("lyrics");
 const playPauseBtn = document.getElementById("playPauseBtn");
 const nextBtn = document.getElementById("nextBtn");
 const restartBtn = document.getElementById("restartBtn");
 const scanAgainBtn = document.getElementById("scanAgainBtn");
+const adjustBtn = document.getElementById("adjustBtn");
+const syncBtn = document.getElementById("syncBtn");
+const thresholdSlider = document.getElementById("thresholdSlider");
+const thresholdValue = document.getElementById("thresholdValue");
 const speedSlider = document.getElementById("speedSlider");
 const speedValue = document.getElementById("speedValue");
 const themeToggle = document.getElementById("themeToggle");
+const beatIndicator = document.getElementById("beatIndicator");
 
 let html5QrCode;
 
@@ -31,30 +40,24 @@ function startQRScanner() {
 }
 
 function normalizeUrl(url) {
-  // GitHub
   if (url.includes("github.com") && url.includes("/blob/")) {
     return url.replace("github.com", "raw.githubusercontent.com").replace("/blob/", "/");
   }
-  // GitLab
   if (url.includes("gitlab.com") && url.includes("/-/blob/")) {
     return url.replace("/-/blob/", "/-/raw/");
   }
-  // Bitbucket
   if (url.includes("bitbucket.org") && url.includes("/src/")) {
     return url.replace("/src/", "/raw/");
   }
-  // Dropbox
   if (url.includes("dropbox.com") && url.includes("?dl=0")) {
     return url.replace("?dl=0", "?dl=1");
   }
-  // Google Drive
   if (url.includes("drive.google.com")) {
     const fileIdMatch = url.match(/[-\w]{25,}/);
     if (fileIdMatch) {
       return `https://drive.google.com/uc?export=download&id=${fileIdMatch[0]}`;
     }
   }
-  // OneDrive
   if (url.includes("1drv.ms")) {
     return url.replace("1drv.ms", "onedrive.live.com/download");
   }
@@ -137,6 +140,50 @@ function scanAgain() {
   startQRScanner();
 }
 
+function activateSync() {
+  if (!syncMode) {
+    navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
+      audioContext = new AudioContext();
+      analyser = audioContext.createAnalyser();
+      microphone = audioContext.createMediaStreamSource(stream);
+      microphone.connect(analyser);
+      dataArray = new Uint8Array(analyser.frequencyBinCount);
+      detectBeats();
+      syncMode = true;
+      syncBtn.textContent = "🎤 Sync On";
+    }).catch(err => console.error(err));
+  } else {
+    syncMode = false;
+    syncBtn.textContent = "🎤 Sync Off";
+  }
+}
+
+function detectBeats() {
+  if (!syncMode) return;
+  analyser.getByteTimeDomainData(dataArray);
+  let sum = 0;
+  for (let i = 0; i < dataArray.length; i++) {
+    sum += Math.abs(dataArray[i] - 128);
+  }
+  let volume = sum / dataArray.length;
+  if (volume > threshold) {
+    beatIndicator.classList.add("active");
+    setTimeout(() => beatIndicator.classList.remove("active"), 100);
+    nextLine();
+    setTimeout(detectBeats, 1000);
+  } else {
+    requestAnimationFrame(detectBeats);
+  }
+}
+
+thresholdSlider.addEventListener("input", () => {
+  threshold = parseInt(thresholdSlider.value);
+  thresholdValue.textContent = threshold;
+});
+
+adjustBtn.addEventListener("click", () => nextLine());
+syncBtn.addEventListener("click", activateSync);
+
 speedSlider.addEventListener("input", () => {
   interval = speedSlider.value * 1000;
   speedValue.textContent = speedSlider.value + "s";
@@ -151,7 +198,6 @@ nextBtn.addEventListener("click", nextLine);
 restartBtn.addEventListener("click", restartLyrics);
 scanAgainBtn.addEventListener("click", scanAgain);
 
-// Troca de tema manual
 themeToggle.addEventListener("click", () => {
   if (document.body.dataset.theme === "light") {
     document.body.dataset.theme = "dark";
@@ -161,27 +207,6 @@ themeToggle.addEventListener("click", () => {
     document.body.dataset.theme = "light";
     document.documentElement.style.setProperty("--bg-color", "#f5f5f5");
     document.documentElement.style.setProperty("--text-color", "#000");
-  }
-});
-
-// Atalhos de teclado
-window.addEventListener("keydown", (e) => {
-  if (e.code === "Space") {
-    e.preventDefault();
-    playPause();
-  } else if (e.code === "ArrowRight") {
-    nextLine();
-  } else if (e.code === "ArrowLeft") {
-    if (currentLine > 0) {
-      currentLine--;
-      renderLyrics();
-    }
-  } else if (e.code === "ArrowUp") {
-    speedSlider.value = Math.max(1, parseInt(speedSlider.value) - 1);
-    speedSlider.dispatchEvent(new Event("input"));
-  } else if (e.code === "ArrowDown") {
-    speedSlider.value = Math.min(10, parseInt(speedSlider.value) + 1);
-    speedSlider.dispatchEvent(new Event("input"));
   }
 });
 
