@@ -1,4 +1,3 @@
-
 let lyrics = [];
 let currentLine = 0;
 let timer = null;
@@ -16,13 +15,11 @@ const adjustBtn = document.getElementById("adjustBtn");
 const syncBtn = document.getElementById("syncBtn");
 const micPermissionMsg = document.getElementById("micPermissionMsg");
 const micStatusMsg = document.getElementById("micStatusMsg");
+const endMsg = document.getElementById("endMsg");
 const thresholdSlider = document.getElementById("thresholdSlider");
-const thresholdValue = document.getElementById("thresholdValue");
 const speedSlider = document.getElementById("speedSlider");
-const speedValue = document.getElementById("speedValue");
-const themeToggle = document.getElementById("themeToggle");
-const beatIndicator = document.getElementById("beatIndicator");
 const volumeMeter = document.getElementById("volumeMeter");
+const beatIndicator = document.getElementById("beatIndicator");
 
 let html5QrCode;
 let silenceTimer;
@@ -35,11 +32,10 @@ function startQRScanner() {
     config,
     async (decodedText) => {
       html5QrCode.stop();
+      endMsg.style.display = "none";
       await loadLyrics(decodedText);
     },
-    (err) => {
-      console.warn(`QR Scan error: ${err}`);
-    }
+    (err) => console.warn(`QR Scan error: ${err}`)
   );
 }
 
@@ -78,6 +74,7 @@ async function loadLyrics(url) {
     currentLine = 0;
     restartBtn.style.display = "none";
     scanAgainBtn.style.display = "none";
+    endMsg.style.display = "none";
     renderLyrics();
   } catch (err) {
     lyricsEl.textContent = "❌ Não foi possível carregar a letra.";
@@ -95,10 +92,7 @@ function renderLyrics() {
       div.classList.add("current");
       setTimeout(() => div.scrollIntoView({ behavior: "smooth", block: "center" }), 100);
     }
-    div.addEventListener("click", () => {
-      currentLine = index;
-      renderLyrics();
-    });
+    div.addEventListener("click", () => { currentLine = index; renderLyrics(); });
     lyricsEl.appendChild(div);
   });
 }
@@ -124,12 +118,14 @@ function nextLine() {
     playPauseBtn.textContent = "▶️";
     restartBtn.style.display = "inline-block";
     scanAgainBtn.style.display = "inline-block";
+    endMsg.style.display = "block";
   }
 }
 
 function restartLyrics() {
   currentLine = 0;
   restartBtn.style.display = "none";
+  endMsg.style.display = "none";
   renderLyrics();
 }
 
@@ -137,79 +133,65 @@ function scanAgain() {
   lyricsEl.innerHTML = "";
   restartBtn.style.display = "none";
   scanAgainBtn.style.display = "none";
+  endMsg.style.display = "none";
   startQRScanner();
 }
 
 function activateSync() {
   if (!syncMode) {
     navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
-      audioContext = new (window.AudioContext || window.webkitAudioContext)();
+      const audioContext = new (window.AudioContext || window.webkitAudioContext)();
       audioContext.resume().then(() => {
-        analyser = audioContext.createAnalyser();
-        microphone = audioContext.createMediaStreamSource(stream);
+        const analyser = audioContext.createAnalyser();
+        const microphone = audioContext.createMediaStreamSource(stream);
         microphone.connect(analyser);
-        dataArray = new Uint8Array(analyser.frequencyBinCount);
+        const dataArray = new Uint8Array(analyser.frequencyBinCount);
         syncMode = true;
-        syncBtn.textContent = "🎤 Sync On";
+        syncBtn.textContent = "🎤 On";
         micPermissionMsg.style.display = "none";
         micStatusMsg.textContent = "⏳ Aguardando som...";
-        detectBeats();
+        detectBeats(analyser, dataArray);
       });
-    }).catch(err => {
-      micPermissionMsg.textContent = "❌ Permissão ao microfone negada.";
+    }).catch(() => {
+      micPermissionMsg.textContent = "❌ Permissão negada.";
       micPermissionMsg.style.color = "red";
     });
   } else {
     syncMode = false;
-    syncBtn.textContent = "🎤 Sync Off";
+    syncBtn.textContent = "🎤 Off";
     micPermissionMsg.style.display = "block";
     micStatusMsg.textContent = "⚠️ Microfone inativo";
     volumeMeter.style.width = "0%";
   }
 }
 
-function detectBeats() {
+function detectBeats(analyser, dataArray) {
   if (!syncMode) return;
   analyser.getByteTimeDomainData(dataArray);
   let sum = 0;
-  for (let i = 0; i < dataArray.length; i++) {
-    sum += Math.abs(dataArray[i] - 128);
-  }
+  for (let i = 0; i < dataArray.length; i++) sum += Math.abs(dataArray[i] - 128);
   let volume = sum / dataArray.length;
-
-  let volumePercent = Math.min(100, Math.max(0, volume * 5));
-  volumeMeter.style.width = volumePercent + "%";
+  volumeMeter.style.width = Math.min(100, volume * 5) + "%";
 
   if (volume > threshold) {
     beatIndicator.classList.add("active");
     setTimeout(() => beatIndicator.classList.remove("active"), 100);
     micStatusMsg.textContent = "🎤 Captando áudio...";
     clearTimeout(silenceTimer);
-    silenceTimer = setTimeout(() => {
-      micStatusMsg.textContent = "⏳ Aguardando som...";
-    }, 1500);
+    silenceTimer = setTimeout(() => { micStatusMsg.textContent = "⏳ Aguardando som..."; }, 1500);
     nextLine();
-    setTimeout(detectBeats, 1000);
+    setTimeout(() => detectBeats(analyser, dataArray), 1000);
   } else {
-    requestAnimationFrame(detectBeats);
+    requestAnimationFrame(() => detectBeats(analyser, dataArray));
   }
 }
 
-thresholdSlider.addEventListener("input", () => {
-  threshold = parseInt(thresholdSlider.value);
-  thresholdValue.textContent = threshold;
-});
-
-adjustBtn.addEventListener("click", () => nextLine());
+thresholdSlider.addEventListener("input", () => { threshold = parseInt(thresholdSlider.value); });
+adjustBtn.addEventListener("click", nextLine);
 syncBtn.addEventListener("click", activateSync);
-
 speedSlider.addEventListener("input", () => {
   interval = speedSlider.value * 1000;
-  speedValue.textContent = speedSlider.value + "s";
-  if (timer) {
-    clearInterval(timer);
-    timer = setInterval(nextLine, interval);
-  }
+  if (timer) { clearInterval(timer); timer = setInterval(nextLine, interval); }
 });
 
 playPauseBtn.addEventListener("click", playPause);
@@ -217,23 +199,7 @@ nextBtn.addEventListener("click", nextLine);
 restartBtn.addEventListener("click", restartLyrics);
 scanAgainBtn.addEventListener("click", scanAgain);
 
-themeToggle.addEventListener("click", () => {
-  if (document.body.dataset.theme === "light") {
-    document.body.dataset.theme = "dark";
-    document.documentElement.style.setProperty("--bg-color", "#111");
-    document.documentElement.style.setProperty("--text-color", "#fff");
-  } else {
-    document.body.dataset.theme = "light";
-    document.documentElement.style.setProperty("--bg-color", "#f5f5f5");
-    document.documentElement.style.setProperty("--text-color", "#000");
-  }
-});
-
 window.addEventListener("load", () => {
-  if ("serviceWorker" in navigator) {
-    navigator.serviceWorker.register("sw.js").then(() => {
-      console.log("✅ Service Worker registrado!");
-    });
-  }
+  if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js");
   startQRScanner();
 });

@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="pt">
 <head>
@@ -10,7 +9,7 @@
     body {
       font-family: sans-serif;
       margin: 0;
-      padding-bottom: 200px;
+      padding-bottom: 160px;
       background: var(--bg-color);
       color: var(--text-color);
       transition: background 0.3s, color 0.3s;
@@ -31,29 +30,33 @@
     .line:hover { background: rgba(128,128,128,0.1); }
     .current { opacity: 1; color: #ff0; font-weight: bold; background: rgba(255,255,0,0.2); }
     #reader { width: 100%; max-width: 400px; margin: auto; }
-    #themeToggle { margin-top: 10px; padding: 0.5rem 1rem; border: none; border-radius: 5px; cursor: pointer; }
+    #themeToggle { margin-top: 5px; padding: 0.3rem 0.8rem; border: none; border-radius: 5px; cursor: pointer; }
     #controls {
       position: fixed;
       bottom: 0;
       left: 0;
       right: 0;
-      background: rgba(0, 0, 0, 0.8);
-      padding: 10px;
+      background: rgba(0, 0, 0, 0.85);
+      padding: 6px;
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+      align-items: center;
+      z-index: 999;
+      font-size: 0.9rem;
+    }
+    @media (prefers-color-scheme: light) {
+      #controls { background: rgba(255, 255, 255, 0.9); }
+    }
+    .controls-row {
       display: flex;
       flex-wrap: wrap;
       justify-content: center;
-      align-items: center;
-      gap: 10px;
-      z-index: 999;
-    }
-    @media (prefers-color-scheme: light) {
-      #controls {
-        background: rgba(255, 255, 255, 0.9);
-      }
+      gap: 5px;
     }
     button {
-      padding: 0.5rem 1rem;
-      font-size: 1rem;
+      padding: 0.3rem 0.6rem;
+      font-size: 0.9rem;
       border: none;
       border-radius: 5px;
       background: #333;
@@ -68,13 +71,13 @@
       }
       button:hover { background: #bbb; }
     }
-    input[type=range] { width: 100px; }
+    input[type=range] { width: 90px; }
     #beatIndicator {
       position: fixed;
       top: 10px;
       right: 10px;
-      width: 24px;
-      height: 24px;
+      width: 20px;
+      height: 20px;
       border-radius: 50%;
       background: red;
       opacity: 0.5;
@@ -84,23 +87,24 @@
     }
     #beatIndicator.active {
       opacity: 1;
-      transform: scale(1.5);
+      transform: scale(1.4);
     }
-    #micPermissionMsg, #micStatusMsg {
-      font-size: 0.9rem;
-      padding: 5px;
-      margin: 5px;
+    #micPermissionMsg, #micStatusMsg, #endMsg {
+      font-size: 0.8rem;
+      padding: 3px;
+      margin: 3px;
       background: rgba(255,255,255,0.1);
       border-radius: 5px;
       color: yellow;
+      text-align: center;
     }
     #volumeMeterContainer {
-      width: 100px;
-      height: 10px;
+      width: 80px;
+      height: 8px;
       background: rgba(255,255,255,0.2);
       border-radius: 5px;
       overflow: hidden;
-      margin: 5px auto;
+      margin: 3px auto;
     }
     #volumeMeter {
       height: 100%;
@@ -118,20 +122,24 @@
   <div id="reader"></div>
   <div id="lyrics"></div>
   <div id="controls">
-    <button id="playPauseBtn">▶️</button>
-    <button id="nextBtn">⏭</button>
-    <button id="adjustBtn">🔧 Ajustar</button>
-    <div>
-      <button id="syncBtn">🎤 Sync Off</button>
-      <div id="micPermissionMsg">ℹ️ Toque em "Sync" e permita acesso ao microfone para sincronizar a letra.</div>
-      <div id="micStatusMsg">⚠️ Microfone inativo</div>
-      <div id="volumeMeterContainer"><div id="volumeMeter"></div></div>
+    <div class="controls-row">
+      <button id="playPauseBtn">▶️</button>
+      <button id="nextBtn">⏭</button>
+      <button id="adjustBtn">🔧</button>
+      <button id="syncBtn">🎤 Off</button>
     </div>
-    <label>Sensibilidade: <input type="range" id="thresholdSlider" min="5" max="100" value="20"> <span id="thresholdValue">20</span></label>
-    <input type="range" id="speedSlider" min="1" max="10" value="3">
-    <span id="speedValue">3s</span>
-    <button id="restartBtn" style="display:none;">🔄</button>
-    <button id="scanAgainBtn" style="display:none;">📷 Ler QR</button>
+    <div class="controls-row">
+      <label>Sens: <input type="range" id="thresholdSlider" min="5" max="100" value="20"></label>
+      <label>Vel: <input type="range" id="speedSlider" min="1" max="10" value="3"></label>
+    </div>
+    <div class="controls-row">
+      <button id="restartBtn" style="display:none;">🔄</button>
+      <button id="scanAgainBtn" style="display:none;">📷 Ler QR</button>
+    </div>
+    <div id="micPermissionMsg">ℹ️ Toque em "Sync" e permita acesso ao microfone</div>
+    <div id="micStatusMsg">⚠️ Microfone inativo</div>
+    <div id="volumeMeterContainer"><div id="volumeMeter"></div></div>
+    <div id="endMsg" style="display:none;">🎵 Música concluída — aponte a câmera para um novo QR Code</div>
   </div>
   <script src="https://unpkg.com/html5-qrcode"></script>
   <script src="app.js"></script>
