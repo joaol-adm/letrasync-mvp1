@@ -1,3 +1,4 @@
+// v20 - Correções de tema e mensagens
 let lyrics = [];
 let currentLine = 0;
 let timer = null;
@@ -20,6 +21,7 @@ const thresholdSlider = document.getElementById("thresholdSlider");
 const speedSlider = document.getElementById("speedSlider");
 const volumeMeter = document.getElementById("volumeMeter");
 const beatIndicator = document.getElementById("beatIndicator");
+const themeToggle = document.getElementById("themeToggle");
 
 let html5QrCode;
 let silenceTimer;
@@ -27,40 +29,28 @@ let silenceTimer;
 function startQRScanner() {
   html5QrCode = new Html5Qrcode("reader");
   const config = { fps: 10, qrbox: 250 };
-  html5QrCode.start(
-    { facingMode: "environment" },
-    config,
-    async (decodedText) => {
-      html5QrCode.stop();
-      endMsg.style.display = "none";
-      await loadLyrics(decodedText);
-    },
-    (err) => console.warn(`QR Scan error: ${err}`)
-  );
+  html5QrCode.start({ facingMode: "environment" }, config, async (decodedText) => {
+    html5QrCode.stop();
+    endMsg.style.display = "none";
+    await loadLyrics(decodedText);
+  }, (err) => console.warn(`QR Scan error: ${err}`));
 }
 
 function normalizeUrl(url) {
-  if (url.includes("github.com") && url.includes("/blob/")) {
+  if (url.includes("github.com") && url.includes("/blob/"))
     return url.replace("github.com", "raw.githubusercontent.com").replace("/blob/", "/");
-  }
-  if (url.includes("gitlab.com") && url.includes("/-/blob/")) {
+  if (url.includes("gitlab.com") && url.includes("/-/blob/"))
     return url.replace("/-/blob/", "/-/raw/");
-  }
-  if (url.includes("bitbucket.org") && url.includes("/src/")) {
+  if (url.includes("bitbucket.org") && url.includes("/src/"))
     return url.replace("/src/", "/raw/");
-  }
-  if (url.includes("dropbox.com") && url.includes("?dl=0")) {
+  if (url.includes("dropbox.com") && url.includes("?dl=0"))
     return url.replace("?dl=0", "?dl=1");
-  }
   if (url.includes("drive.google.com")) {
     const fileIdMatch = url.match(/[-\w]{25,}/);
-    if (fileIdMatch) {
-      return `https://drive.google.com/uc?export=download&id=${fileIdMatch[0]}`;
-    }
+    if (fileIdMatch) return `https://drive.google.com/uc?export=download&id=${fileIdMatch[0]}`;
   }
-  if (url.includes("1drv.ms")) {
+  if (url.includes("1drv.ms"))
     return url.replace("1drv.ms", "onedrive.live.com/download");
-  }
   return url;
 }
 
@@ -147,7 +137,6 @@ function activateSync() {
         microphone.connect(analyser);
         const dataArray = new Uint8Array(analyser.frequencyBinCount);
         syncMode = true;
-        syncBtn.textContent = "🎤 On";
         micPermissionMsg.style.display = "none";
         micStatusMsg.textContent = "⏳ Aguardando som...";
         detectBeats(analyser, dataArray);
@@ -158,7 +147,6 @@ function activateSync() {
     });
   } else {
     syncMode = false;
-    syncBtn.textContent = "🎤 Off";
     micPermissionMsg.style.display = "block";
     micStatusMsg.textContent = "⚠️ Microfone inativo";
     volumeMeter.style.width = "0%";
@@ -172,7 +160,6 @@ function detectBeats(analyser, dataArray) {
   for (let i = 0; i < dataArray.length; i++) sum += Math.abs(dataArray[i] - 128);
   let volume = sum / dataArray.length;
   volumeMeter.style.width = Math.min(100, volume * 5) + "%";
-
   if (volume > threshold) {
     beatIndicator.classList.add("active");
     setTimeout(() => beatIndicator.classList.remove("active"), 100);
@@ -198,6 +185,12 @@ playPauseBtn.addEventListener("click", playPause);
 nextBtn.addEventListener("click", nextLine);
 restartBtn.addEventListener("click", restartLyrics);
 scanAgainBtn.addEventListener("click", scanAgain);
+
+themeToggle.addEventListener("click", () => {
+  const body = document.body;
+  const currentTheme = body.getAttribute("data-theme");
+  body.setAttribute("data-theme", currentTheme === "light" ? "dark" : "light");
+});
 
 window.addEventListener("load", () => {
   if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js");
